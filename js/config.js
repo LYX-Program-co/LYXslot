@@ -49,34 +49,34 @@ const GAME_CONFIG = {
 
 // ==================== RTP配置 ====================
 const RTP_CONFIG = {
-    // 基础RTP设置
-    targetRTP: 96.5,                    // 目标RTP百分比
+    // 基础RTP设置 - 修改为90%
+    targetRTP: 90.0,                    // 目标RTP百分比
     volatility: 'medium',               // 波动率: low/medium/high
-    hitFrequency: 22,                   // 中奖频率(%)
+    hitFrequency: 18,                   // 中奖频率(%) - 降低
     
-    // RTP分配比例
+    // RTP分配比例 - 修改分配
     rtpDistribution: {
-        baseGame: 85.0,                 // 基础游戏RTP
-        freeSpins: 8.5,                 // 免费旋转RTP  
+        baseGame: 79.0,                 // 基础游戏RTP
+        freeSpins: 8.0,                 // 免费旋转RTP  
         jackpot: 2.0,                   // Jackpot RTP
         bonus: 1.0                      // 奖金游戏RTP
     },
     
-    // 符号出现频率 (基于RTP计算)
+    // 符号出现频率调整 (基于90% RTP)
     symbolFrequencies: {
-        'symbols/10.png': 15.5,    // 最低价值符号 - 最高频率
-        'symbols/07.png': 12.5,    // 低价值符号
-        'symbols/09.png': 8.2,     // 中低价值符号
-        'symbols/08.png': 4.1,     // 高价值符号
-        'symbols/01.png': 2.1,     // 最高价值符号 - 最低频率
-        'symbols/02.png': 2.0,     // 高价值符号
-        'symbols/03.png': 2.0,     // 高价值符号
-        'symbols/04.png': 8.0,     // 中价值符号
-        'symbols/05.png': 8.0,     // 中价值符号
-        'symbols/06.png': 8.0,     // 中价值符号
-        'symbols/11.png': 1.8,     // Wild符号
-        'symbols/12.png': 1.8,     // Scatter符号
-        'symbols/13.png': 1.0      // Bonus符号
+        'symbols/10.png': 16.5,    // 增加低价值符号频率
+        'symbols/07.png': 13.5,    
+        'symbols/09.png': 9.2,     
+        'symbols/08.png': 3.1,     // 减少高价值符号频率
+        'symbols/01.png': 1.6,     
+        'symbols/02.png': 1.5,     
+        'symbols/03.png': 1.5,     
+        'symbols/04.png': 7.0,     
+        'symbols/05.png': 7.0,     
+        'symbols/06.png': 7.0,     
+        'symbols/11.png': 1.5,     
+        'symbols/12.png': 1.5,     
+        'symbols/13.png': 0.8      
     },
     
     // 动态调整参数
@@ -84,29 +84,29 @@ const RTP_CONFIG = {
         enabled: true,
         checkInterval: 100,             // 每100局检查一次
         maxAdjustment: 5.0,             // 最大调整幅度%
-        minRTP: 94.0,                   // 最低RTP限制
-        maxRTP: 98.0                    // 最高RTP限制
+        minRTP: 88.0,                   // 调整最低RTP
+        maxRTP: 92.0                    // 调整最高RTP
     },
     
     // 波动率配置
     volatilityProfiles: {
         low: {
-            baseHitRate: 30,
+            baseHitRate: 25,
             bigWinMultiplier: 50,
             drySpellMax: 10,
-            symbolFrequencyMultiplier: 1.2
+            symbolFrequencyMultiplier: 1.3
         },
         medium: {
-            baseHitRate: 22, 
-            bigWinMultiplier: 100,
+            baseHitRate: 18,            // 降低命中率
+            bigWinMultiplier: 80,
             drySpellMax: 15,
             symbolFrequencyMultiplier: 1.0
         },
         high: {
-            baseHitRate: 15,
-            bigWinMultiplier: 200,
+            baseHitRate: 12,
+            bigWinMultiplier: 150,
             drySpellMax: 25,
-            symbolFrequencyMultiplier: 0.8
+            symbolFrequencyMultiplier: 0.7
         }
     }
 };
@@ -205,6 +205,139 @@ const PAYTABLES = {
     40: PAYTABLE_40
 };
 
+// ==================== 虚拟玩家系统配置 ====================
+const VIRTUAL_PLAYER_CONFIG = {
+    enabled: true,
+    announcementInterval: { min: 30000, max: 180000 }, // 30秒-3分钟
+    jackpotTrigger: 100000, // Jackpot在10万后才开始掉落
+    virtualPlayerRTP: 90, // 虚拟玩家RTP 90%
+    
+    // 马来西亚风格名字组件
+    nameComponents: {
+        // 马来人名字
+        malayFirst: [
+            "Ahmad", "Mohd", "Muhammad", "Abdul", "Ali", "Hassan", "Ismail", "Osman", 
+            "Rahman", "Ibrahim", "Salleh", "Halim", "Zainal", "Kamal", "Rosli", "Yusof",
+            "Zulkifli", "Shamsudin", "Firdaus", "Hakim", "Razak", "Najib", "Mahathir",
+            "Anwar", "Wan", "Nik", "Megat", "Tengku", "Raja", "Syed"
+        ],
+        malayLast: [
+            "bin Abdullah", "bin Ismail", "bin Hassan", "bin Ahmad", "bin Mohamed", 
+            "bin Ali", "bin Omar", "bin Ibrahim", "bin Yusof", "bin Rahman",
+            "binti Abdullah", "binti Ahmad", "binti Hassan", "binti Ismail", "binti Omar"
+        ],
+        
+        // 华人名字（马来西亚风格）
+        chineseFirst: [
+            "Lim", "Tan", "Lee", "Chan", "Wong", "Ng", "Teh", "Ooi", "Yap", "Chong",
+            "Goh", "Khoo", "Lau", "Cheah", "Foo", "Khaw", "Loh", "Pang", "Quek", "Sim",
+            "Tee", "Yong", "Zain", "Rizal", "Hakim", "Farid", "Amir", "Zul", "Shah"
+        ],
+        chineseLast: [
+            "Seng", "Heng", "Kong", "Leong", "Peng", "Soon", "Wai", "Chuan", "Kiat",
+            "Hock", "Keong", "Chin", "Meng", "Wei", "Jing", "Ling", "Ying", "Mei",
+            "Hui", "Lian", "Fong", "Sim", "Ling", "Yen", "Li", "Min", "Xin", "Jun"
+        ],
+        
+        // 印度人名字
+        indianFirst: [
+            "Raj", "Kumar", "Mohan", "Suresh", "Ramesh", "Anand", "Vijay", "Prakash",
+            "Santosh", "Dinesh", "Harish", "Murali", "Gopal", "Arjun", "Vikram",
+            "Shankar", "Bala", "Krishnan", "Mani", "Selvam", "Nathan", "Kannan"
+        ],
+        indianLast: [
+            "a/l", "a/p", "s/o", "d/o", "Ram", "Krishna", "Sharma", "Patel", "Singh",
+            "Kaur", "Devi", "Lingam", "Pillai", "Nair", "Menon", "Nadar", "Reddy"
+        ],
+        
+        // 昵称和称号
+        nicknames: [
+            "Pro", "Master", "King", "Queen", "Legend", "VIP", "Dragon", "Tiger",
+            "Lucky", "Rich", "Gold", "Diamond", "Platinum", "Elite", "Supreme",
+            "Millionaire", "Boss", "Captain", "Chief", "Lord", "Sir", "Madam"
+        ],
+        numbers: ["888", "999", "777", "666", "123", "321", "100", "200", "500", "1000"]
+    },
+    
+    // 已使用的名字集合（确保不重复）
+    usedNames: new Set(),
+    
+    // 中奖金额范围
+    winAmounts: {
+        small: { min: 50, max: 500 },
+        medium: { min: 500, max: 2000 },
+        large: { min: 2000, max: 10000 },
+        jackpot: { min: 50000, max: 200000 }
+    }
+};
+
+// ==================== 马来西亚名字生成器 ====================
+VIRTUAL_PLAYER_CONFIG.generateMalaysianName = function() {
+    const comp = this.nameComponents;
+    let name, attempts = 0;
+    
+    do {
+        const race = Math.random();
+        if (race < 0.5) {
+            // 马来人名字 (50%)
+            const first = comp.malayFirst[Math.floor(Math.random() * comp.malayFirst.length)];
+            const last = comp.malayLast[Math.floor(Math.random() * comp.malayLast.length)];
+            name = `${first} ${last}`;
+        } else if (race < 0.8) {
+            // 华人名字 (30%)
+            const first = comp.chineseFirst[Math.floor(Math.random() * comp.chineseFirst.length)];
+            const last = comp.chineseLast[Math.floor(Math.random() * comp.chineseLast.length)];
+            name = `${first} ${last}`;
+        } else {
+            // 印度人名字 (20%)
+            const first = comp.indianFirst[Math.floor(Math.random() * comp.indianFirst.length)];
+            const last = comp.indianLast[Math.floor(Math.random() * comp.indianLast.length)];
+            name = `${first} ${last}`;
+        }
+        
+        // 30%概率添加昵称
+        if (Math.random() < 0.3) {
+            const nickname = comp.nicknames[Math.floor(Math.random() * comp.nicknames.length)];
+            const number = comp.numbers[Math.floor(Math.random() * comp.numbers.length)];
+            name = `${nickname}${number}_${name}`;
+        }
+        
+        attempts++;
+        if (attempts > 50) {
+            // 如果尝试50次还有重复，添加随机后缀
+            name = `${name}_${Math.random().toString(36).substr(2, 3)}`;
+            break;
+        }
+    } while (this.usedNames.has(name));
+    
+    this.usedNames.add(name);
+    return name;
+};
+
+// ==================== 预生成玩家名字池 ====================
+VIRTUAL_PLAYER_CONFIG.initializeNamePool = function(size = 200) {
+    this.namePool = [];
+    for (let i = 0; i < size; i++) {
+        this.namePool.push(this.generateMalaysianName());
+    }
+    console.log(`已生成 ${size} 个马来西亚风格虚拟玩家名称`);
+};
+
+// ==================== 获取随机玩家名字 ====================
+VIRTUAL_PLAYER_CONFIG.getRandomPlayerName = function() {
+    if (!this.namePool || this.namePool.length === 0) {
+        this.initializeNamePool();
+    }
+    
+    if (this.namePool.length > 0) {
+        const index = Math.floor(Math.random() * this.namePool.length);
+        return this.namePool[index];
+    }
+    
+    // 备用方案
+    return this.generateMalaysianName();
+};
+
 // 导出配置
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
@@ -217,6 +350,7 @@ if (typeof module !== 'undefined' && module.exports) {
         HIGH_VALUE_SYMBOLS,
         MEDIUM_VALUE_SYMBOLS,
         LOW_VALUE_SYMBOLS,
-        PAYTABLES
+        PAYTABLES,
+        VIRTUAL_PLAYER_CONFIG
     };
 }
