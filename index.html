@@ -242,25 +242,5 @@
     });
     </script>
 
-
-<!-- 自动播放背景音乐（新增） -->
-<audio id="bgm" src="music/background/bg.mp3" autoplay loop hidden></audio>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const bgm = document.getElementById('bgm');
-    const tryPlay = () => { bgm.play().catch(() => {}); };
-    tryPlay();
-
-    const unlockAudio = () => {
-        bgm.play().catch(() => {});
-        document.removeEventListener('touchstart', unlockAudio);
-        document.removeEventListener('click', unlockAudio);
-    };
-    document.addEventListener('touchstart', unlockAudio);
-    document.addEventListener('click', unlockAudio);
-});
-</script>
-
 </body>
 </html>
