@@ -1,441 +1,302 @@
-// ==================== Reel Manager ====================
-// 负责卷轴的创建、旋转动画、停止控制，以及与 RTP/游戏状态的衔接
-
+// ==================== 卷轴管理器 ====================
 class ReelManager {
-    constructor(config, gameState, rtpManager) {
-        this.config = config;
-        this.gameState = gameState;
-        this.rtpManager = rtpManager;
-
-        this.reels = [];
-        this.isSpinning = false;
-        this.spinStartTime = 0;
-
-        this.reelStopOrder = [];
-        this.currentStopIndex = 0;
-
-        this.winLinesCanvas = null;
-        this.winLinesCtx = null;
-
-        this.currentResult = null;
-        this.currentWinLines = [];
-
-        this.animationFrameId = null;
-        this.lastFrameTime = 0;
-
-        this.reelSpinConfig = {
-            acceleration: 1.2,
-            maxSpeed: 35,
-            deceleration: 0.95
-        };
-
-        this.queuedResult = null;
-        this.spinResolve = null;
-        this.spinReject = null;
-
-        this.mobileOptimization = true;
-        this.pixelRatio = window.devicePixelRatio || 1;
-
-        this.symbolPreloadDone = false;
-        this.symbolImageCache = new Map();
-
-        this.initDOM();
+    constructor(reelElements, audioManager = null) {
+        this.reels = Array.from(reelElements).map((reelEl, index) => ({
+            element: reelEl,
+            strip: reelEl.querySelector('.reel-strip'),
+            index: index,
+            symbols: [],
+            currentPosition: 0,
+            isSpinning: false,
+            isStopping: false
+        }));
+        
+        // 音频管理器引用
+        this.audioManager = audioManager;
+        
+        // 从 CSS 动态读取符号高度，确保 JS 与 CSS 完全同步
+        const rootStyle = getComputedStyle(document.documentElement);
+        this.symbolHeight = parseFloat(rootStyle.getPropertyValue('--symbol-height')) || 100;
+        
+        this.visibleCount = GAME_CONFIG.visibleSymbols; // 一般 = 3
+        this.bufferTop = 3; // 顶部缓冲行数
+        this.bufferBottom = 3; // 底部缓冲行数
+        
+        this.initializeReels();
     }
-
-    initDOM() {
-        const reelsContainer = document.getElementById('reels-container');
-        if (!reelsContainer) {
-            console.error('[ReelManager] 未找到 #reels-container');
-            return;
-        }
-
-        this.winLinesCanvas = document.getElementById('win-lines-canvas');
-        if (!this.winLinesCanvas) {
-            this.winLinesCanvas = document.createElement('canvas');
-            this.winLinesCanvas.id = 'win-lines-canvas';
-            reelsContainer.prepend(this.winLinesCanvas);
-        }
-        this.winLinesCtx = this.winLinesCanvas.getContext('2d');
-
-        const reelElements = reelsContainer.querySelectorAll('.reel');
-        this.reels = [];
-
-        reelElements.forEach((reelEl, index) => {
-            const viewport = reelEl.querySelector('.reel-viewport');
-            const strip = reelEl.querySelector('.reel-strip');
-
-            if (!viewport || !strip) {
-                console.error(`[ReelManager] 第 ${index} 个卷轴缺少 viewport/strip`);
-                return;
-            }
-
-            const reelObj = {
-                index,
-                root: reelEl,
-                viewport,
-                strip,
-                position: 0,
-                speed: 0,
-                isStopping: false,
-                stopTargetIndex: null,
-                visibleSymbols: this.config.visibleSymbols || 3,
-                symbolHeight: 0,
-                totalSymbols: this.config.symbolsPerReel || 30,
-                currentSymbols: []
-            };
-
-            this.reels.push(reelObj);
-        });
-
-        window.addEventListener('resize', () => this.handleResize());
-        this.handleResize();
-
-        this.preloadSymbols();
-        this.initialFillStrips();
+    
+    // 设置音频管理器
+    setAudioManager(audioManager) {
+        this.audioManager = audioManager;
     }
-
-    handleResize() {
-        if (!this.winLinesCanvas || !this.winLinesCtx) return;
-
-        const reelsContainer = document.getElementById('reels-container');
-        if (!reelsContainer) return;
-
-        const rect = reelsContainer.getBoundingClientRect();
-        const ratio = this.pixelRatio;
-
-        this.winLinesCanvas.width = rect.width * ratio;
-        this.winLinesCanvas.height = rect.height * ratio;
-
-        this.winLinesCanvas.style.width = `${rect.width}px`;
-        this.winLinesCanvas.style.height = `${rect.height}px`;
-
-        this.winLinesCtx.setTransform(ratio, 0, 0, ratio, 0, 0);
-
+    
+    // 初始化卷轴
+    initializeReels() {
         this.reels.forEach(reel => {
-            const viewportRect = reel.viewport.getBoundingClientRect();
-            reel.symbolHeight = viewportRect.height / reel.visibleSymbols;
-        });
-
-        this.redrawWinLines();
-    }
-
-    preloadSymbols() {
-        if (this.symbolPreloadDone) return;
-
-        const uniqueSymbols = new Set(this.config.symbols);
-        uniqueSymbols.forEach(symbolPath => {
-            const img = new Image();
-            img.src = "/" + symbolPath;
-            this.symbolImageCache.set(symbolPath, img);
-        });
-
-        this.symbolPreloadDone = true;
-    }
-
-    initialFillStrips() {
-        this.reels.forEach(reel => {
-            reel.strip.innerHTML = '';
-            reel.currentSymbols = [];
-
-            const total = reel.totalSymbols;
-            for (let i = 0; i < total; i++) {
-                const symbolIndex = Math.floor(Math.random() * this.config.symbols.length);
-                const symbol = this.config.symbols[symbolIndex];
-                reel.currentSymbols.push(symbol);
-                this.appendSymbol(reel, symbol);
-            }
-
-            reel.position = 0;
-            reel.strip.style.transform = 'translateY(0px)';
+            this.generateReelStrip(reel);
         });
     }
-
+    
+    // 生成卷轴条
+    generateReelStrip(reel) {
+        reel.symbols = [];
+        reel.strip.innerHTML = '';
+        
+        // 生成长卷轴
+        for (let i = 0; i < GAME_CONFIG.symbolsPerReel; i++) {
+            const symbol = this.getWeightedSymbol();
+            reel.symbols.push(symbol);
+            this.appendSymbol(reel, symbol);
+        }
+        
+        // 设置初始位置
+        this.setReelPosition(reel, 0);
+    }
+    
+    // DOM: 添加一个符号元素
     appendSymbol(reel, symbol) {
         const symbolEl = document.createElement('div');
         symbolEl.className = 'symbol';
-
+        
         const img = document.createElement('img');
-        img.src = "/" + symbol;  // ★★★ 已修复：指向根目录 /symbols/xx.png
+        img.src = symbol;
         img.alt = '符号';
         img.className = 'symbol-img';
-
+        
         symbolEl.appendChild(img);
         symbolEl.setAttribute('data-symbol', symbol);
         reel.strip.appendChild(symbolEl);
     }
-
-    prepareSpin(resultMatrix, winLines) {
-        this.currentResult = resultMatrix;
-        this.currentWinLines = winLines || [];
-
-        this.reelStopOrder = [];
-        for (let i = 0; i < this.reels.length; i++) {
-            this.reelStopOrder.push(i);
-        }
-
-        this.currentStopIndex = 0;
-        this.queuedResult = resultMatrix;
-    }
-
-    spin() {
-        if (this.isSpinning) {
-            console.warn('[ReelManager] 正在旋转，忽略新的 spin 请求');
-            return Promise.reject(new Error('SPIN_IN_PROGRESS'));
-        }
-        if (!this.reels.length) {
-            console.error('[ReelManager] 尚未初始化 reels');
-            return Promise.reject(new Error('NO_REELS'));
-        }
-
-        this.clearWinLinesCanvas();
-
-        this.reels.forEach(reel => {
-            reel.isStopping = false;
-            reel.stopTargetIndex = null;
-            reel.speed = 0;
+    
+    // 获取加权随机符号（结合 RTP 配置）
+    getWeightedSymbol() {
+        const frequencies = RTP_CONFIG?.symbolFrequencies || {
+            'symbols/10.png': 15.5,
+            'symbols/07.png': 12.5,
+            'symbols/09.png': 8.2,
+            'symbols/08.png': 4.1,
+            'symbols/01.png': 2.1,
+            'symbols/02.png': 2.0,
+            'symbols/03.png': 2.0,
+            'symbols/04.png': 8.0,
+            'symbols/05.png': 8.0,
+            'symbols/06.png': 8.0,
+            'symbols/11.png': 1.8,
+            'symbols/12.png': 1.8,
+            'symbols/13.png': 1.0
+        };
+        
+        const weightedSymbols = [];
+        Object.entries(frequencies).forEach(([symbol, freq]) => {
+            weightedSymbols.push(...Array(Math.round(freq * 10)).fill(symbol));
         });
-
-        this.isSpinning = true;
-        this.spinStartTime = performance.now();
-        this.lastFrameTime = this.spinStartTime;
-
-        if (!this.animationFrameId) {
-            this.animationFrameId = requestAnimationFrame(ts => this.spinLoop(ts));
-        }
-
-        return new Promise((resolve, reject) => {
-            this.spinResolve = resolve;
-            this.spinReject = reject;
-        });
+        
+        return weightedSymbols[Math.floor(Math.random() * weightedSymbols.length)];
     }
-
-    spinLoop(timestamp) {
-        if (!this.isSpinning) {
-            this.animationFrameId = null;
-            return;
-        }
-
-        const deltaTime = Math.min(50, timestamp - this.lastFrameTime);
-        this.lastFrameTime = timestamp;
-
-        const elapsed = timestamp - this.spinStartTime;
-
-        this.reels.forEach((reel, index) => {
-            if (reel.speed < this.reelSpinConfig.maxSpeed) {
-                reel.speed += this.reelSpinConfig.acceleration;
-                if (reel.speed > this.reelSpinConfig.maxSpeed) {
-                    reel.speed = this.reelSpinConfig.maxSpeed;
+    
+    // 设置卷轴位置（核心：严格按整格高度移动）
+    setReelPosition(reel, position) {
+        const total = GAME_CONFIG.symbolsPerReel;
+        let pos = position % total;
+        if (pos < 0) pos += total;
+        
+        reel.currentPosition = pos;
+        reel.strip.style.transform = `translateY(${-pos * this.symbolHeight}px)`;
+    }
+    
+    // 旋转单个卷轴
+    async spinReel(reel, finalSymbols, delay = 0) {
+        return new Promise(resolve => {
+            setTimeout(async () => {
+                // 开始旋转
+                reel.isSpinning = true;
+                reel.element.classList.add('spinning');
+                
+                // 每个卷轴按索引叠加停轮时间
+                const spinTime = GAME_CONFIG.spinDuration - (reel.index * GAME_CONFIG.reelStopDelay);
+                
+                // 旋转动画
+                await this.animateSpin(reel, spinTime);
+                
+                // 停止卷轴（平滑贴到最终符号）
+                await this.stopReel(reel, finalSymbols);
+                
+                // ========== 新增：播放停止音效 ==========
+                if (this.audioManager) {
+                    this.audioManager.playStopSound();
                 }
-            }
-
-            reel.position += reel.speed;
-
-            const reelHeight = reel.symbolHeight * reel.totalSymbols;
-            if (reel.position >= reelHeight) {
-                reel.position -= reelHeight;
-            }
-
-            reel.strip.style.transform = `translateY(${-reel.position}px)`;
-
-            const delayBeforeStop = (index * this.config.reelStopDelay) || 200;
-
-            if (!reel.isStopping && elapsed > delayBeforeStop) {
-                reel.isStopping = true;
-
-                let visibleSymbols;
-                if (this.currentResult && this.currentResult[index]) {
-                    visibleSymbols = this.currentResult[index];
+                // ======================================
+                
+                resolve();
+            }, delay);
+        });
+    }
+    
+    // 旋转动画：控制位置，不再用 CSS keyframes 控制 Y 轴
+    async animateSpin(reel, duration) {
+        const startTime = Date.now();
+        const startPosition = reel.currentPosition;
+        const steps = 20; // 旋转的大致格数（可调）
+        
+        return new Promise(resolve => {
+            const animate = () => {
+                if (!reel.isSpinning) {
+                    resolve();
+                    return;
+                }
+                
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const easeProgress = this.easeInOutCubic(progress);
+                
+                const newPosition = startPosition + (easeProgress * steps);
+                const total = GAME_CONFIG.symbolsPerReel;
+                let pos = Math.floor(newPosition) % total;
+                if (pos < 0) pos += total;
+                
+                this.setReelPosition(reel, pos);
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
                 } else {
-                    visibleSymbols = [];
-                    for (let i = 0; i < reel.visibleSymbols; i++) {
-                        const randomSymbol = this.config.symbols[Math.floor(Math.random() * this.config.symbols.length)];
-                        visibleSymbols.push(randomSymbol);
-                    }
+                    resolve();
                 }
-
-                this.setReelStopTarget(reel, visibleSymbols);
-            }
-
-            if (reel.isStopping && reel.stopTargetIndex !== null) {
-                const targetOffset = reel.stopTargetIndex * reel.symbolHeight;
-                const currentOffset = reel.position;
-                let diff = currentOffset - targetOffset;
-
-                const reelHeight = reel.symbolHeight * reel.totalSymbols;
-                if (diff < -reelHeight / 2) diff += reelHeight;
-                if (diff > reelHeight / 2) diff -= reelHeight;
-
-                const decel = this.reelSpinConfig.deceleration;
-                reel.speed *= decel;
-
-                if (Math.abs(diff) < 3 && reel.speed < 3) {
-                    reel.position = targetOffset;
-                    reel.strip.style.transform = `translateY(${-reel.position}px)`;
-                    reel.speed = 0;
-                    reel.isStopping = false;
-                }
-            }
-        });
-
-        const allStopped = this.reels.every(r => !r.isStopping && r.speed === 0);
-        if (allStopped && this.isSpinning) {
-            this.isSpinning = false;
-            this.animationFrameId = null;
-
-            this.onSpinComplete();
-            return;
-        }
-
-        this.animationFrameId = requestAnimationFrame(ts => this.spinLoop(ts));
-    }
-
-    setReelStopTarget(reel, visibleSymbols) {
-        const total = reel.totalSymbols;
-        if (!reel.currentSymbols || reel.currentSymbols.length !== total) {
-            reel.currentSymbols = [];
-            reel.strip.innerHTML = '';
-            for (let i = 0; i < total; i++) {
-                const randomSymbol = this.config.symbols[Math.floor(Math.random() * this.config.symbols.length)];
-                reel.currentSymbols.push(randomSymbol);
-                this.appendSymbol(reel, randomSymbol);
-            }
-        }
-
-        const targetIndex = Math.floor(reel.position / reel.symbolHeight);
-        const newSymbols = [...reel.currentSymbols];
-
-        for (let i = 0; i < visibleSymbols.length; i++) {
-            const symbolIndex = (targetIndex + i) % total;
-            newSymbols[symbolIndex] = visibleSymbols[i];
-
-            const symbolEl = reel.strip.children[symbolIndex];
-            if (symbolEl) {
-                const img = symbolEl.querySelector('.symbol-img');
-                if (img) {
-                    img.src = "/" + visibleSymbols[i];
-                    symbolEl.setAttribute('data-symbol', visibleSymbols[i]);
-                }
-            }
-        }
-
-        reel.currentSymbols = newSymbols;
-        reel.stopTargetIndex = targetIndex;
-    }
-
-    onSpinComplete() {
-        if (this.currentWinLines && this.currentWinLines.length > 0) {
-            this.drawWinLines(this.currentWinLines);
-        }
-
-        if (this.spinResolve) {
-            this.spinResolve({
-                resultMatrix: this.currentResult,
-                winLines: this.currentWinLines
-            });
-        }
-
-        this.currentResult = null;
-        this.currentWinLines = [];
-        this.spinResolve = null;
-        this.spinReject = null;
-    }
-
-    drawWinLines(winLines) {
-        if (!this.winLinesCanvas || !this.winLinesCtx) return;
-
-        const ctx = this.winLinesCtx;
-        this.clearWinLinesCanvas();
-
-        const reelsContainer = document.getElementById('reels-container');
-        if (!reelsContainer) return;
-
-        const rect = reelsContainer.getBoundingClientRect();
-        const reelWidth = rect.width / this.reels.length;
-        const rowHeight = rect.height / (this.config.visibleSymbols || 3);
-
-        winLines.forEach((line, index) => {
-            if (!line || !line.positions || !line.positions.length) return;
-
-            const path = line.positions;
-
-            ctx.save();
-            ctx.lineWidth = 3;
-            ctx.strokeStyle = this.getLineColor(index);
-            ctx.beginPath();
-
-            path.forEach((pos, i) => {
-                const x = (pos.reel + 0.5) * reelWidth;
-                const y = (pos.row + 0.5) * rowHeight;
-
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-            });
-
-            ctx.stroke();
-            ctx.restore();
+            };
+            
+            animate();
         });
     }
-
-    getLineColor(index) {
-        const colors = [
-            '#FFD700',
-            '#00FFFF',
-            '#FF1493',
-            '#00FF00',
-            '#FF4500',
-            '#1E90FF',
-            '#ADFF2F',
-            '#FF69B4',
-            '#00CED1',
-            '#FFA500'
-        ];
-        return colors[index % colors.length];
+    
+    // 停止卷轴：生成最终 strip + 平滑移动到最终格
+    async stopReel(reel, finalSymbols) {
+        reel.isSpinning = false;
+        reel.isStopping = true;
+        reel.element.classList.remove('spinning');
+        reel.element.classList.add('stopping');
+        
+        // 重新生成卷轴并让 finalSymbols 出现在可视顶部 buffer 后
+        const finalIndex = this.setFinalSymbols(reel, finalSymbols);
+        
+        // 按整格高度平滑移动
+        const targetY = -finalIndex * this.symbolHeight;
+        reel.strip.style.transition = 'transform 0.45s cubic-bezier(0.25, 1, 0.25, 1.25)';
+        reel.strip.style.transform = `translateY(${targetY}px)`;
+        
+        await new Promise(resolve => setTimeout(resolve, 450));
+        
+        reel.element.classList.remove('stopping');
+        reel.isStopping = false;
     }
-
-    clearWinLinesCanvas() {
-        if (!this.winLinesCanvas || !this.winLinesCtx) return;
-        this.winLinesCtx.clearRect(
-            0,
-            0,
-            this.winLinesCanvas.width,
-            this.winLinesCanvas.height
+    
+    // 设置最终符号结构：bufferTop + finalSymbols + bufferBottom
+    setFinalSymbols(reel, finalSymbols) {
+        reel.symbols = [];
+        reel.strip.innerHTML = '';
+        
+        // 顶部缓冲
+        for (let i = 0; i < this.bufferTop; i++) {
+            const symbol = this.getWeightedSymbol();
+            reel.symbols.push(symbol);
+            this.appendSymbol(reel, symbol);
+        }
+        
+        // 中间真实结果（最终要显示的行）
+        finalSymbols.forEach(s => {
+            reel.symbols.push(s);
+            this.appendSymbol(reel, s);
+        });
+        
+        // 底部缓冲
+        for (let i = 0; i < this.bufferBottom; i++) {
+            const symbol = this.getWeightedSymbol();
+            reel.symbols.push(symbol);
+            this.appendSymbol(reel, symbol);
+        }
+        
+        const targetIndex = this.bufferTop;
+        reel.currentPosition = targetIndex;
+        
+        return targetIndex;
+    }
+    
+    // 缓动函数
+    easeInOutCubic(t) {
+        return t < 0.5 ?
+            4 * t * t * t :
+            1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+    
+    // 获取当前可见符号（与画面严格对齐）
+    getVisibleSymbols() {
+        return this.reels.map(reel => {
+            const startIndex = reel.currentPosition;
+            return reel.symbols.slice(startIndex, startIndex + this.visibleCount);
+        });
+    }
+    
+    // 批量旋转所有卷轴
+    async spinAllReels(finalReels) {
+        const spinPromises = this.reels.map((reel, index) =>
+            this.spinReel(reel, finalReels[index], 0)
         );
+        
+        await Promise.all(spinPromises);
+        return this.getVisibleSymbols();
     }
-
-    redrawWinLines() {
-        if (this.currentWinLines && this.currentWinLines.length > 0) {
-            this.drawWinLines(this.currentWinLines);
-        }
-    }
-
-    forceStopAll() {
-        if (!this.isSpinning) return;
-
+    
+    // 重置所有卷轴
+    resetAllReels() {
         this.reels.forEach(reel => {
-            reel.isStopping = false;
-            reel.speed = 0;
-            reel.stopTargetIndex = null;
+            this.generateReelStrip(reel);
         });
-
-        this.isSpinning = false;
-
-        if (this.animationFrameId) {
-            cancelAnimationFrame(this.animationFrameId);
-            this.animationFrameId = null;
-        }
-
-        this.clearWinLinesCanvas();
-
-        if (this.spinReject) {
-            this.spinReject(new Error('SPIN_FORCE_STOP'));
-        }
-
-        this.spinResolve = null;
-        this.spinReject = null;
-        this.currentResult = null;
-        this.currentWinLines = [];
+    }
+    
+    // 检查是否所有卷轴都停止
+    allReelsStopped() {
+        return this.reels.every(reel => !reel.isSpinning && !reel.isStopping);
+    }
+    
+    // 获取卷轴状态（用于调试）
+    getReelStatus() {
+        return this.reels.map(reel => ({
+            index: reel.index,
+            isSpinning: reel.isSpinning,
+            isStopping: reel.isStopping,
+            symbolCount: reel.symbols.length
+        }));
+    }
+    
+    // 强制停止所有卷轴
+    forceStopAllReels() {
+        this.reels.forEach(reel => {
+            reel.isSpinning = false;
+            reel.isStopping = false;
+            reel.element.classList.remove('spinning', 'stopping');
+        });
+    }
+    
+    // 预加载符号（预留，暂不实现）
+    preloadSymbols() {
+        // 可在此预创建符号 DOM 用于复用
+    }
+    
+    // 更新符号样式
+    updateSymbolStyles(styles) {
+        this.reels.forEach(reel => {
+            const symbols = reel.strip.querySelectorAll('.symbol');
+            symbols.forEach(symbol => {
+                Object.assign(symbol.style, styles);
+            });
+        });
+    }
+    
+    // 销毁清理
+    destroy() {
+        this.forceStopAllReels();
+        this.reels.forEach(reel => {
+            reel.strip.innerHTML = '';
+        });
+        this.reels = [];
+        this.audioManager = null;
     }
 }
-
-// 导出为全局（如果需要）
-window.ReelManager = ReelManager;
