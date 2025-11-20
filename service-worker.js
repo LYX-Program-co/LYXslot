@@ -1,6 +1,6 @@
-const CACHE_NAME = 'slot-game-pwa-v2'; // 版本号递增，确保更新
+const CACHE_NAME = 'slot-game-pwa-v3'; // 版本号递增，确保更新
 
-// 需要缓存的所有文件路径
+// 需要缓存的所有文件路径 (包含所有代码、PWA文件和游戏资源)
 const FILES_TO_CACHE = [
     './',
     './index.html',
@@ -15,14 +15,12 @@ const FILES_TO_CACHE = [
     './js/ui-manager.js',
     './js/game.js',
     
-    // PWA Manifest
+    // PWA Manifest 和 Icon
     './manifest.json',
-    
-    // 您上传的图片文件
     './1565.jpg', 
     './1566.jpg', 
     
-    // 游戏资源文件 (根据 config.js 推断的路径)
+    // 游戏符号资源 (从 config.js 推断)
     './symbols/01.png',
     './symbols/02.png',
     './symbols/03.png',
@@ -33,26 +31,22 @@ const FILES_TO_CACHE = [
     './symbols/08.png',
     './symbols/09.png',
     './symbols/10.png',
-    './symbols/11.png', // Wild
-    './symbols/12.png', // Scatter
-    './symbols/13.png', // Bonus
+    './symbols/11.png', 
+    './symbols/12.png', 
+    './symbols/13.png', 
     
-    // 音频文件 (根据 index.html 推断的路径)
+    // 音频文件 (从 index.html 推断)
     './music/background/bg.mp3'
-    
-    // 请务必检查这些资源路径在您的服务器上是否准确！
 ];
 
 // 1. 安装事件: 缓存所有文件
 self.addEventListener('install', (evt) => {
-    console.log('[ServiceWorker] 正在安装...');
     evt.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
             console.log('[ServiceWorker] 正在预缓存所需资源');
             return cache.addAll(FILES_TO_CACHE);
         }).catch(error => {
-            console.error('[ServiceWorker] 预缓存失败 (可能因为某些路径404):', error);
-            // 失败不应阻止安装，但在生产环境中应确保所有路径正确
+            console.error('[ServiceWorker] 预缓存失败:', error);
             return Promise.resolve(); 
         })
     );
@@ -61,7 +55,6 @@ self.addEventListener('install', (evt) => {
 
 // 2. 激活事件: 清理旧的缓存
 self.addEventListener('activate', (evt) => {
-    console.log('[ServiceWorker] 正在激活...');
     evt.waitUntil(
         caches.keys().then((keyList) => {
             return Promise.all(keyList.map((key) => {
