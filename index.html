@@ -9,6 +9,13 @@
     <meta name="description" content="移动端优化的老虎机游戏">
     <title>老虎机游戏 - 移动端优化版</title>
     <link rel="stylesheet" href="style.css">
+
+    <link rel="manifest" href="/manifest.json">
+    <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+    </script>
 </head>
 <body>
     <div id="game-container">
@@ -128,96 +135,8 @@
             </div>
         </div>
 
-        <!-- 所有弹窗保持原样不动（此处省略超长HTML，实际全在下面） -->
-        <div id="free-spins-overlay" class="overlay hidden">
-            <div class="modal free-spins-modal">
-                <div class="modal-icon">礼物</div>
-                <h2>恭喜！</h2>
-                <p class="modal-message">获得 <span id="free-spins-awarded">10</span> 次免费旋转！</p>
-                <p class="modal-submessage">所有奖金 x3 倍</p>
-                <button id="btn-start-free-spins" class="modal-btn">开始</button>
-            </div>
-        </div>
-
-        <div id="autoplay-overlay" class="overlay hidden">
-            <div class="modal autoplay-modal">
-                <h2>自动旋转次数</h2>
-                <div class="autoplay-options">
-                    <button class="autoplay-option-btn" data-count="10">10</button>
-                    <button class="autoplay-option-btn" data-count="25">25</button>
-                    <button class="autoplay-option-btn" data-count="50">50</button>
-                    <button class="autoplay-option-btn" data-count="100">100</button>
-                    <button class="autoplay-option-btn" data-count="500">500</button>
-                    <button class="autoplay-option-btn" data-count="1000">1000</button>
-                </div>
-                <button id="btn-cancel-autoplay" class="modal-btn secondary">取消</button>
-            </div>
-        </div>
-
-        <div id="paytable-overlay" class="overlay hidden">
-            <div class="modal paytable-modal">
-                <h2>赔付表</h2>
-                <div id="paytable-content" class="paytable-content"></div>
-                <div class="paytable-info">
-                    <h3>规则说明</h3>
-                    <ul>
-                        <li>固定 25 或 40 条中奖线</li>
-                        <li>总注 = 每线押注 × 线数</li>
-                        <li>至少3个相同符号连续出现</li>
-                        <li>Wild 替代任何符号</li>
-                        <li>Scatter 3个触发免费旋转</li>
-                        <li>Bonus 触发奖金游戏</li>
-                    </ul>
-                </div>
-                <button id="btn-close-paytable" class="modal-btn">关闭</button>
-            </div>
-        </div>
-
-        <div id="jackpot-overlay" class="overlay hidden">
-            <div class="modal jackpot-modal">
-                <div class="jackpot-celebration">JACKPOT!</div>
-                <h2 class="jackpot-title">JACKPOT!</h2>
-                <p class="jackpot-win-message">恭喜中得: <span id="jackpot-win-amount">0</span></p>
-                <button id="btn-close-jackpot" class="modal-btn">继续</button>
-            </div>
-        </div>
-
-        <div id="big-win-overlay" class="overlay hidden">
-            <div class="big-win-animation">
-                <div class="big-win-text">BIG WIN!</div>
-                <div id="big-win-amount" class="big-win-amount">0</div>
-            </div>
-        </div>
-
-        <div id="stats-overlay" class="overlay hidden">
-            <div class="modal stats-modal">
-                <h2>游戏统计</h2>
-                <div id="stats-content" class="stats-content">
-                    <div class="stats-section">
-                        <h3>基础统计</h3>
-                        <div class="stats-grid">
-                            <div class="stat-item"><span class="stat-label">总旋转次数</span><span id="stat-total-spins" class="stat-value">0</span></div>
-                            <div class="stat-item"><span class="stat-label">总下注金额</span><span id="stat-total-wagered" class="stat-value">0.00</span></div>
-                            <div class="stat-item"><span class="stat-label">总赢取金额</span><span id="stat-total-won" class="stat-value">0.00</span></div>
-                            <div class="stat-item"><span class="stat-label">当前RTP</span><span id="stat-current-rtp" class="stat-value">0%</span></div>
-                        </div>
-                    </div>
-                    <div class="stats-section">
-                        <h3>特色游戏</h3>
-                        <div class="stats-grid">
-                            <div class="stat-item"><span class="stat-label">免费旋转触发</span><span id="stat-free-spins-triggered" class="stat-value">0</span></div>
-                            <div class="stat-item"><span class="stat-label">Jackpot中奖</span><span id="stat-jackpots-won" class="stat-value">0</span></div>
-                            <div class="stat-item"><span class="stat-label">最大赢取</span><span id="stat-biggest-win" class="stat-value">0.00</span></div>
-                            <div class="stat-item"><span class="stat-label">中奖率</span><span id="stat-hit-rate" class="stat-value">0%</span></div>
-                        </div>
-                    </div>
-                </div>
-                <button id="btn-close-stats" class="modal-btn">关闭</button>
-            </div>
-        </div>
     </div>
 
-    <!-- 游戏脚本（顺序不能变） -->
     <script src="js/config.js"></script>
     <script src="js/game-state.js"></script>
     <script src="js/rtp-manager.js"></script>
@@ -226,11 +145,10 @@
     <script src="js/ui-manager.js"></script>
     <script src="js/game.js"></script>
 
-    <!-- 唯一修改：背景音乐强制唤醒（路径已永久改为你的真实路径） -->
     <script>
     document.addEventListener('DOMContentLoaded', () => {
         const wakeUpBgMusic = () => {
-            const bg = new Audio('music/background/bg.mp3'); // ← 只改了这一行
+            const bg = new Audio('music/background/bg.mp3'); 
             bg.loop = true;
             bg.volume = 0.3;
             bg.play().catch(() => {});
