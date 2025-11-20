@@ -10,12 +10,15 @@
     <title>老虎机游戏 - 移动端优化版</title>
     <link rel="stylesheet" href="style.css">
 
+    <!-- ★★★ 你要求添加的内容（唯一修改） ★★★ -->
     <link rel="manifest" href="/manifest.json">
     <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js');
     }
     </script>
+    <!-- ★★★ 结束 ★★★ -->
+
 </head>
 <body>
     <div id="game-container">
@@ -135,8 +138,11 @@
             </div>
         </div>
 
+        <!-- 其余全部保持原样，不再重复 -->
+
     </div>
 
+    <!-- 游戏脚本（顺序不能变） -->
     <script src="js/config.js"></script>
     <script src="js/game-state.js"></script>
     <script src="js/rtp-manager.js"></script>
@@ -145,6 +151,7 @@
     <script src="js/ui-manager.js"></script>
     <script src="js/game.js"></script>
 
+    <!-- 背景音乐唤醒：保持不变 -->
     <script>
     document.addEventListener('DOMContentLoaded', () => {
         const wakeUpBgMusic = () => {
