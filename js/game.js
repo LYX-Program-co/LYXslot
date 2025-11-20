@@ -8,12 +8,34 @@ class GameEngine {
         this.reelManager = new ReelManager(document.querySelectorAll('.reel'), this.audioManager);
         this.rtpManager = new RTPManager(RTP_CONFIG);
         
+        // ========== 新增：虚拟玩家系统 ==========
+        this.virtualPlayers = {
+            announcementTimer: null,
+            jackpotTriggered: false,
+            lastJackpotTime: 0
+        };
+        
+        // 修改RTP为90%
+        RTP_CONFIG.targetRTP = 90;
+        RTP_CONFIG.rtpDistribution = {
+            baseGame: 79.0,
+            freeSpins: 8.0,
+            jackpot: 2.0,
+            bonus: 1.0
+        };
+        
+        // ========== 新增：初始化虚拟玩家名字池 ==========
+        VIRTUAL_PLAYER_CONFIG.initializeNamePool(300); // 预生成300个名字
+        
         // 初始化游戏
         this.initializeGame();
         this.initializeEventListeners();
         this.startJackpotGrowth();
         
-        console.log('老虎机游戏已启动！');
+        // ========== 新增：启动虚拟玩家公告 ==========
+        this.startVirtualPlayerAnnouncements();
+        
+        console.log('老虎机游戏已启动！RTP: 90%');
         console.log('💡 提示：点击任意位置启用背景音乐');
     }
 
@@ -157,6 +179,82 @@ class GameEngine {
         }, { passive: false });
     }
 
+    // ========== 新增：虚拟玩家公告系统 ==========
+    startVirtualPlayerAnnouncements() {
+        const scheduleNextAnnouncement = () => {
+            const delay = Math.random() * 
+                (VIRTUAL_PLAYER_CONFIG.announcementInterval.max - 
+                 VIRTUAL_PLAYER_CONFIG.announcementInterval.min) + 
+                VIRTUAL_PLAYER_CONFIG.announcementInterval.min;
+            
+            this.virtualPlayers.announcementTimer = setTimeout(() => {
+                this.generateVirtualPlayerWin();
+                scheduleNextAnnouncement();
+            }, delay);
+        };
+        
+        scheduleNextAnnouncement();
+    }
+    
+    generateVirtualPlayerWin() {
+        const playerName = this.getRandomPlayerName();
+        const winType = this.getRandomWinType();
+        const amount = this.calculateVirtualWinAmount(winType);
+        
+        let message = '';
+        
+        if (winType === 'jackpot') {
+            // Jackpot只给虚拟玩家
+            message = `🎉 恭喜玩家 ${playerName} 赢得Jackpot大奖 ${amount.toLocaleString()}元！`;
+            this.virtualPlayers.jackpotTriggered = true;
+            this.virtualPlayers.lastJackpotTime = Date.now();
+            
+            // 重置Jackpot
+            this.state.jackpot = GAME_CONFIG.initialJackpot;
+        } else {
+            message = `🎊 玩家 ${playerName} 中得 ${amount.toLocaleString()}元 ${winType}奖金！`;
+        }
+        
+        this.ui.addAnnouncement(message, 'success');
+        
+        // 播放音效（如果是Jackpot）
+        if (winType === 'jackpot' && this.audioManager) {
+            this.audioManager.playWinSound(amount);
+        }
+    }
+    
+    getRandomPlayerName() {
+        return VIRTUAL_PLAYER_CONFIG.getRandomPlayerName();
+    }
+    
+    getRandomWinType() {
+        const rand = Math.random();
+        
+        // 检查是否满足Jackpot触发条件
+        if (this.state.jackpot >= VIRTUAL_PLAYER_CONFIG.jackpotTrigger && 
+            !this.virtualPlayers.jackpotTriggered &&
+            Date.now() - this.virtualPlayers.lastJackpotTime > 300000) { // 5分钟内不重复
+            
+            const jackpotChance = 0.02; // 2%概率
+            if (rand < jackpotChance) {
+                return 'jackpot';
+            }
+        }
+        
+        if (rand < 0.6) return 'small';
+        if (rand < 0.85) return 'medium';
+        return 'large';
+    }
+    
+    calculateVirtualWinAmount(winType) {
+        const ranges = VIRTUAL_PLAYER_CONFIG.winAmounts[winType];
+        if (winType === 'jackpot') {
+            // Jackpot金额基于当前累计
+            return this.state.jackpot * (0.8 + Math.random() * 0.4); // 80%-120%的Jackpot
+        }
+        return ranges.min + Math.random() * (ranges.max - ranges.min);
+    }
+
     // 开始旋转
     async spin() {
         if (this.state.isSpinning) return;
@@ -272,10 +370,11 @@ class GameEngine {
         // 添加赢取金额
         this.state.addWin(totalWin);
 
-        // Jackpot检测
-        if (Math.random() < this.rtpManager.calculateJackpotProbability()) {
-            await this.awardJackpot();
-        }
+        // Jackpot检测 - 真实玩家永远不能中Jackpot
+        // 这里直接跳过，不执行任何操作
+        // if (Math.random() < this.rtpManager.calculateJackpotProbability()) {
+        //     await this.awardJackpot();
+        // }
 
         // 显示结果
         if (totalWin > 0) {
@@ -360,8 +459,15 @@ class GameEngine {
         }, 3000);
     }
 
-    // 奖励Jackpot
+    // ========== 修改：Jackpot奖励方法 ==========
     async awardJackpot() {
+        // 真实玩家永远不能中Jackpot
+        // 这里直接返回，不执行任何操作
+        console.log('Jackpot触发，但只保留给虚拟玩家');
+        return;
+        
+        // 注释掉原有的Jackpot奖励代码
+        /*
         const jackpotWin = this.state.jackpot;
         this.state.winJackpot(jackpotWin);
         this.ui.setJackpotWinAmount(jackpotWin);
@@ -370,6 +476,7 @@ class GameEngine {
         
         // 更新RTP统计
         this.rtpManager.recordSpin(0, jackpotWin, 'jackpot');
+        */
     }
 
     // 开始免费旋转
@@ -424,8 +531,17 @@ class GameEngine {
     // 开始Jackpot增长
     startJackpotGrowth() {
         setInterval(() => {
-            this.state.jackpot += Math.random() * 0.5;
+            this.state.jackpot += Math.random() * 0.3; // 降低增长速度
             this.ui.updateDisplay(this.state);
+            
+            // 检查是否可以触发虚拟玩家Jackpot
+            if (this.state.jackpot >= VIRTUAL_PLAYER_CONFIG.jackpotTrigger && 
+                !this.virtualPlayers.jackpotTriggered) {
+                // 有2%概率在下次公告时触发
+                if (Math.random() < 0.02) {
+                    this.virtualPlayers.jackpotTriggered = true;
+                }
+            }
         }, 1000);
     }
 
@@ -464,7 +580,8 @@ class GameEngine {
             },
             rtpStats: this.rtpManager.getDetailedReport(),
             reelStatus: this.reelManager.getReelStatus(),
-            audioStatus: this.audioManager.getAudioStatus()
+            audioStatus: this.audioManager.getAudioStatus(),
+            virtualPlayers: this.virtualPlayers
         };
         
         console.log('调试信息:', debugInfo);
@@ -548,8 +665,13 @@ class GameEngine {
         this.ui.addAnnouncement('游戏数据已导出', 'success');
     }
 
-    // 销毁游戏（清理资源）
+    // ========== 修改：销毁时清理定时器 ==========
     destroy() {
+        // 清理虚拟玩家定时器
+        if (this.virtualPlayers.announcementTimer) {
+            clearTimeout(this.virtualPlayers.announcementTimer);
+        }
+        
         this.reelManager.destroy();
         this.audioManager.destroy();
         this.stopAutoplay();
