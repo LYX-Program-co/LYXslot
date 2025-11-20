@@ -1,0 +1,999 @@
+/* ==================== 全局设置 ==================== */
+:root {
+    --primary-gold: #FFD700;
+    --dark-bg: #1a0d00;
+    --card-bg: rgba(0, 0, 0, 0.85);
+    --border-gold: #DAA520;
+    --text-white: #FFFFFF;
+    --text-gray: #AAAAAA;
+    --red-btn: #DC143C;
+    --green-win: #00FF00;
+    --transition: all 0.3s ease;
+    
+    /* 调整尺寸以确保 SymbolHeight 是 ReelHeight 的 1/3 */
+    --reel-width: 100px;
+    --reel-height: 300px; /* 3个可见符号，每个100px */
+    --symbol-height: 100px;
+
+    /* 3D 效果相关变量 */
+    --base-spin-duration: 0.10s; /* 基础旋转动画时间 */
+    --stop-bounce-duration: 0.5s; /* 停止时的回弹动画时间 */
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: 'Arial', 'Microsoft YaHei', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    position: fixed;
+    overscroll-behavior: none;
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    /* 修改：将 body 背景改为纯黑，避免图片加载前闪烁，实际背景由 game-container 控制 */
+    background-color: #000000;
+    color: var(--text-white);
+    touch-action: pan-x pan-y;
+    user-select: none;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* ==================== 游戏容器 ==================== */
+#game-container {
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    
+    /* ========== 修改开始：背景图片设置 ========== */
+    /* 请确保你的图片路径正确，这里假设图片在 images 文件夹下，名为 bg.jpg */
+    background: url('images/bg.jpg') no-repeat center center;
+    
+    /* 确保图片铺满整个屏幕 */
+    background-size: cover;
+    /* ========== 修改结束 ========== */
+
+    overflow: hidden;
+}
+
+/* ==================== 顶部信息区 ==================== */
+.top-info {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px;
+    z-index: 10;
+    flex-shrink: 0;
+    gap: 5px;
+}
+
+.info-box {
+    background: var(--card-bg);
+    border: 2px solid var(--primary-gold);
+    border-radius: 6px;
+    padding: 6px;
+    backdrop-filter: blur(5px);
+    font-size: 10px;
+    flex: 1;
+    min-width: 0;
+}
+
+.info-box h3 {
+    color: var(--primary-gold);
+    font-size: 10px;
+    margin-bottom: 4px;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.scrollable-content {
+    max-height: 80px;
+    overflow-y: auto;
+    font-size: 9px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.scrollable-content::-webkit-scrollbar {
+    width: 3px;
+}
+
+.scrollable-content::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.scrollable-content::-webkit-scrollbar-thumb {
+    background: var(--primary-gold);
+    border-radius: 2px;
+}
+
+/* 输赢记录表 */
+#win-loss-table table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#win-loss-table th,
+#win-loss-table td {
+    border: 1px solid var(--border-gold);
+    padding: 2px 4px;
+    text-align: center;
+    font-size: 9px;
+}
+
+#win-loss-table th {
+    background: rgba(218, 165, 32, 0.2);
+    color: var(--primary-gold);
+}
+
+.result-win {
+    color: var(--green-win);
+}
+
+.result-lose {
+    color: #FF4444;
+}
+
+.time-cell {
+    font-size: 8px;
+    color: var(--text-gray);
+}
+
+/* Jackpot 显示 */
+.jackpot-box {
+    text-align: center;
+    padding: 8px 10px;
+    background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+    border: 3px solid #FFE55C;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+}
+
+.jackpot-label {
+    font-size: 9px;
+    font-weight: bold;
+    color: #8B0000;
+    margin-bottom: 2px;
+}
+
+.jackpot-amount {
+    font-size: 16px;
+    font-weight: bold;
+    color: #FFFFFF;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+/* 公告栏 */
+.announcement-item {
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(255, 215, 0, 0.3);
+    animation: slideIn 0.3s ease-out;
+}
+
+.announcement-item.info { color: var(--text-white); }
+.announcement-item.success { color: var(--green-win); }
+.announcement-item.error { color: #FF4444; }
+.announcement-item.warning { color: #FFA500; }
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* ==================== 卷轴区域 ==================== */
+#reels-section {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 5px;
+    min-height: 0;
+    /* 3D 舞台 */
+    perspective: 1000px;
+    contain: layout paint style;
+}
+
+#reels-container {
+    position: relative;
+    display: flex;
+    gap: 6px;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.7);
+    border: 5px solid #8B4513;
+    border-radius: 10px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.7);
+    /* 保持 3D 转换 */
+    transform-style: preserve-3d;
+}
+
+#win-lines-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.reel {
+    width: var(--reel-width);
+    flex-shrink: 0;
+    /* 3D 转换 */
+    transform-style: preserve-3d;
+    transition: transform var(--stop-bounce-duration) ease-out;
+}
+
+.reel-viewport {
+    width: 100%;
+    height: var(--reel-height);
+    background: linear-gradient(180deg, #000000 0%, #1a1a1a 100%);
+    border: 3px solid #333333;
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.8);
+    transform-style: preserve-3d;
+    contain: layout paint style;
+}
+
+.reel-viewport::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border: 2px solid rgba(255, 215, 0, 0.3);
+    border-radius: 4px;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.reel-strip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    will-change: transform;
+    transform-style: preserve-3d;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+}
+
+.symbol {
+    width: 100%;
+    height: var(--symbol-height);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 42px;
+    background: rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+    position: relative;
+    /* 符号背景光泽 */
+    box-shadow: inset 0 0 5px rgba(255, 255, 255, 0.1);
+    filter: none; /* 确保停止时移除模糊 */
+    transition: filter 0.5s ease;
+}
+
+/* 符号图片样式 */
+.symbol-img {
+    width: 80%;
+    height: 80%;
+    object-fit: contain;
+}
+
+/* 赔付表符号图片样式 */
+.paytable-symbol-img {
+    width: 50px;
+    height: 50px;
+    object-fit: contain;
+    margin-bottom: 5px;
+}
+
+/* 3D 旋转效果：仅用轻微倾斜，Y 轴由 JS 控制 */
+.reel.spinning .reel-strip {
+    transition: none !important;
+    transform: translateY(0) rotateX(12deg);
+}
+
+/* 旋转时的模糊效果 */
+.reel.spinning .symbol-img {
+    filter: blur(5px) brightness(0.8);
+}
+
+/* 停止动画：配合 JS 的最终 translateY，做一个回弹 */
+.reel.stopping .reel-strip {
+    transition: transform 0.45s cubic-bezier(0.25, 1, 0.25, 1.25);
+}
+
+/* 中奖高亮 */
+.symbol.highlight {
+    animation: highlight 0.4s ease-in-out 4, glow 1s infinite alternate;
+    border: 3px solid var(--primary-gold);
+    box-shadow: 0 0 20px var(--primary-gold), inset 0 0 15px rgba(255, 215, 0, 0.5);
+    z-index: 10;
+    border-radius: 4px;
+    /* 微微放大强调 */
+    transform: scale(1.05);
+    will-change: transform, filter, box-shadow;
+}
+
+.symbol.highlight::after {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    right: -5px;
+    bottom: -5px;
+    border: 2px solid var(--primary-gold);
+    border-radius: 8px;
+    animation: pulse-glow 1s ease-in-out infinite;
+}
+
+/* 中奖高亮时的符号图片 */
+.symbol.highlight .symbol-img {
+    filter: brightness(1.5);
+}
+
+@keyframes highlight {
+    0%, 100% {
+        transform: scale(1.05);
+        filter: brightness(1);
+    }
+    50% {
+        transform: scale(1.15);
+        filter: brightness(1.5);
+    }
+}
+
+@keyframes glow {
+    from { box-shadow: 0 0 20px var(--primary-gold), inset 0 0 15px rgba(255, 215, 0, 0.5); }
+    to { box-shadow: 0 0 35px var(--primary-gold), inset 0 0 20px rgba(255, 215, 0, 0.8); }
+}
+
+@keyframes pulse-glow {
+    0%, 100% { opacity: 0.5; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.05); }
+}
+
+/* ==================== 控制面板 ==================== */
+#control-panel {
+    background: var(--card-bg);
+    border-top: 3px solid var(--primary-gold);
+    padding: 10px 8px;
+    backdrop-filter: blur(10px);
+    flex-shrink: 0;
+}
+
+.panel-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.display-section {
+    display: flex;
+    justify-content: space-around;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.display-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    align-items: center;
+    min-width: 60px;
+}
+
+.display-label {
+    font-size: 9px;
+    color: var(--text-gray);
+    text-transform: uppercase;
+}
+
+.display-value {
+    font-size: 14px;
+    font-weight: bold;
+    color: var(--primary-gold);
+}
+
+.win-amount {
+    color: var(--green-win);
+}
+
+.free-spins {
+    color: #FF69B4;
+}
+
+.autoplay-text {
+    color: #00BFFF;
+}
+
+.lines-value {
+    color: #00FF7F;
+}
+
+.total-bet {
+    color: #FFA500;
+}
+
+/* 押注控制 */
+.bet-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.bet-btn {
+    width: 28px;
+    height: 28px;
+    background: #333333;
+    border: 2px solid var(--primary-gold);
+    border-radius: 4px;
+    color: var(--primary-gold);
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    min-width: 44px;
+}
+
+.bet-btn:active {
+    transform: scale(0.9);
+    background: #444444;
+}
+
+.compact-btn {
+    width: 40px;
+    font-size: 12px;
+    margin-left: 5px;
+}
+
+/* 按钮区域 */
+.button-section {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+}
+
+.control-btn {
+    padding: 10px 12px;
+    background: #333333;
+    border: 2px solid var(--primary-gold);
+    border-radius: 6px;
+    color: var(--primary-gold);
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: var(--transition);
+    white-space: nowrap;
+    flex: 1;
+    min-width: 50px;
+    min-height: 44px;
+}
+
+.control-btn:active {
+    transform: scale(0.95);
+    background: #444444;
+}
+
+.spin-btn {
+    padding: 12px 30px;
+    background: linear-gradient(135deg, var(--red-btn) 0%, #FF1744 100%);
+    border: 3px solid #FF69B4;
+    border-radius: 8px;
+    color: var(--text-white);
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: var(--transition);
+    box-shadow: 0 4px 15px rgba(220, 20, 60, 0.5);
+    text-transform: uppercase;
+    flex: 2;
+    min-height: 44px;
+}
+
+.spin-btn:active {
+    transform: scale(0.95);
+    box-shadow: 0 2px 10px rgba(220, 20, 60, 0.7);
+}
+
+.spin-btn:disabled {
+    background: #555555;
+    border-color: #777777;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+button:focus-visible {
+    outline: 2px solid var(--primary-gold);
+    outline-offset: 2px;
+}
+
+/* ==================== 弹窗样式 ==================== */
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.2s ease-out;
+    padding: 20px;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal {
+    background: linear-gradient(135deg, #2d1b4e 0%, #4a2c6d 100%);
+    border: 3px solid var(--primary-gold);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 10px 50px rgba(0, 0, 0, 0.8);
+    animation: scaleIn 0.2s ease-out;
+    max-width: 90vw;
+    max-height: 85vh;
+    overflow-y: auto;
+}
+
+@keyframes scaleIn {
+    from {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.modal h2 {
+    color: var(--primary-gold);
+    font-size: 24px;
+    margin-bottom: 15px;
+    text-transform: uppercase;
+}
+
+.modal-icon {
+    font-size: 60px;
+    margin-bottom: 15px;
+    animation: bounce 1s ease-in-out infinite;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+}
+
+.modal-message {
+    font-size: 16px;
+    margin-bottom: 8px;
+    color: var(--text-white);
+}
+
+.modal-submessage {
+    font-size: 14px;
+    color: #FFD700;
+    margin-bottom: 15px;
+}
+
+.modal-btn {
+    padding: 12px 30px;
+    background: var(--primary-gold);
+    border: none;
+    border-radius: 8px;
+    color: #000000;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: var(--transition);
+    margin: 5px;
+}
+
+.modal-btn:active {
+    transform: scale(0.95);
+    background: #FFE55C;
+}
+
+.modal-btn.secondary {
+    background: #666666;
+    color: var(--text-white);
+}
+
+/* 自动旋转选项 */
+.autoplay-options {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin: 15px 0;
+}
+
+.autoplay-option-btn {
+    padding: 15px 20px;
+    background: #444444;
+    border: 2px solid var(--primary-gold);
+    border-radius: 8px;
+    color: var(--primary-gold);
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.autoplay-option-btn:active {
+    transform: scale(0.95);
+    background: #555555;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+}
+
+/* 赔付表 */
+.paytable-modal {
+    max-width: 600px;
+    width: 90vw;
+}
+
+.paytable-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 10px;
+    margin: 15px 0;
+    max-height: 50vh;
+    overflow-y: auto;
+}
+
+.paytable-item {
+    background: rgba(0, 0, 0, 0.5);
+    border: 2px solid var(--border-gold);
+    border-radius: 6px;
+    padding: 10px;
+    text-align: center;
+}
+
+.paytable-symbol {
+    font-size: 36px;
+    margin-bottom: 5px;
+}
+
+.paytable-payouts {
+    font-size: 10px;
+    color: var(--text-white);
+}
+
+.paytable-payouts div {
+    margin: 2px 0;
+}
+
+.paytable-special {
+    color: #FFD700;
+    font-size: 9px;
+    font-style: italic;
+}
+
+.paytable-info {
+    background: rgba(0, 0, 0, 0.5);
+    border: 2px solid #8B008B;
+    border-radius: 6px;
+    padding: 10px;
+    margin-top: 15px;
+    text-align: left;
+}
+
+.paytable-info h3 {
+    color: var(--primary-gold);
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+.paytable-info ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.paytable-info li {
+    padding: 3px 0;
+    color: var(--text-white);
+    font-size: 11px;
+}
+
+.paytable-info li::before {
+    content: "• ";
+    color: var(--primary-gold);
+    font-weight: bold;
+}
+
+/* Jackpot 中奖 */
+.jackpot-celebration {
+    font-size: 80px;
+    animation: bounce 0.5s ease-in-out infinite;
+}
+
+.jackpot-title {
+    font-size: 48px;
+    color: var(--primary-gold);
+    text-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+    animation: pulse 1s ease-in-out infinite;
+}
+
+.jackpot-win-message {
+    font-size: 24px;
+    margin: 15px 0;
+    color: var(--text-white);
+}
+
+/* 大奖动画 */
+.big-win-animation {
+    text-align: center;
+    animation: scaleIn 0.3s ease-out, screen-shake 0.1s ease-in-out infinite;
+    position: relative;
+}
+
+@keyframes screen-shake {
+    0%, 100% { transform: translate(1px, 1px) rotate(0deg); }
+    25% { transform: translate(-1px, 0) rotate(-1deg); }
+    50% { transform: translate(1px, -1px) rotate(1deg); }
+    75% { transform: translate(-1px, 1px) rotate(-1deg); }
+}
+
+.big-win-text {
+    font-size: 60px;
+    font-weight: bold;
+    color: var(--primary-gold);
+    text-shadow: 0 0 30px rgba(255, 215, 0, 0.8);
+    animation: pulse 0.5s ease-in-out infinite;
+}
+
+.big-win-amount {
+    font-size: 36px;
+    color: var(--green-win);
+    margin-top: 15px;
+    text-shadow: 0 0 20px rgba(0, 255, 0, 0.8);
+}
+
+/* 统计弹窗 */
+.stats-modal {
+    max-width: 500px;
+    width: 90vw;
+}
+
+.stats-content {
+    text-align: left;
+    margin: 15px 0;
+}
+
+.stats-section {
+    margin-bottom: 20px;
+}
+
+.stats-section h3 {
+    color: var(--primary-gold);
+    font-size: 16px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--border-gold);
+    padding-bottom: 5px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(255, 215, 0, 0.2);
+}
+
+.stat-label {
+    font-size: 12px;
+    color: var(--text-gray);
+}
+
+.stat-value {
+    font-size: 14px;
+    font-weight: bold;
+    color: var(--primary-gold);
+}
+
+/* ==================== 响应式优化 ==================== */
+@media (max-width: 480px) {
+    :root {
+        --reel-width: 65px;
+        --reel-height: 195px; /* 3 * 65px */
+        --symbol-height: 65px;
+    }
+    
+    .symbol {
+        font-size: 36px;
+    }
+    
+    .info-box {
+        font-size: 9px;
+    }
+    
+    .display-value {
+        font-size: 12px;
+    }
+    
+    .control-btn {
+        font-size: 11px;
+        padding: 8px 10px;
+    }
+    
+    .spin-btn {
+        font-size: 14px;
+        padding: 10px 20px;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (min-width: 481px) and (max-width: 767px) {
+    :root {
+        --reel-width: 80px;
+        --reel-height: 240px;
+        --symbol-height: 80px;
+    }
+    
+    .symbol {
+        font-size: 48px;
+    }
+}
+
+@media (min-width: 768px) {
+    :root {
+        --reel-width: 120px;
+        --reel-height: 360px;
+        --symbol-height: 120px;
+    }
+    
+    .symbol {
+        font-size: 56px;
+    }
+    
+    .top-info {
+        padding: 10px;
+    }
+    
+    .info-box {
+        font-size: 12px;
+        padding: 10px;
+    }
+    
+    .display-value {
+        font-size: 18px;
+    }
+    
+    .scrollable-content {
+        max-height: 100px;
+        font-size: 11px;
+    }
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+    .top-info {
+        padding: 3px;
+        gap: 3px;
+    }
+    
+    .info-box {
+        padding: 4px;
+        font-size: 8px;
+    }
+    
+    #reels-section {
+        padding: 5px;
+    }
+    
+    #control-panel {
+        padding: 6px;
+    }
+    
+    .display-section {
+        gap: 4px;
+    }
+    
+    .display-item {
+        min-width: 50px;
+    }
+}
+
+@media (orientation: landscape) and (max-height: 400px) {
+    .top-info {
+        flex-wrap: wrap;
+    }
+    
+    .info-box {
+        min-width: 30%;
+    }
+    
+    #reels-section {
+        padding: 2px;
+    }
+    
+    .display-section {
+        flex-wrap: nowrap;
+    }
+}
+
+/* 减少动画对用户的影响 */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+    
+    .symbol.highlight {
+        animation: none;
+        border: 2px solid var(--primary-gold);
+        box-shadow: 0 0 10px var(--primary-gold);
+    }
+}
+
+/* 高对比度模式支持 */
+@media (prefers-contrast: high) {
+    :root {
+        --primary-gold: #FFFF00;
+        --green-win: #00FF00;
+        --red-btn: #FF0000;
+    }
+    
+    .symbol.highlight {
+        border-width: 4px;
+    }
+}
+
+/* 深色模式支持 */
+@media (prefers-color-scheme: dark) {
+    body {
+        background-color: #000000;
+    }
+    
+    /* game-container 已经设置了图片背景，这里不需要覆盖，或者可以设置为深色背景备用 */
+}
