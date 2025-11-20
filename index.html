@@ -8,17 +8,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="description" content="移动端优化的老虎机游戏">
     <title>老虎机游戏 - 移动端优化版</title>
+    
+    <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="style.css">
-
-    <!-- ★★★ 你要求添加的内容（唯一修改） ★★★ -->
-    <link rel="manifest" href="/manifest.json">
-    <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js');
-    }
-    </script>
-    <!-- ★★★ 结束 ★★★ -->
-
 </head>
 <body>
     <div id="game-container">
@@ -46,103 +38,107 @@
             </div>
 
             <div id="announcement-board" class="info-box">
-                <h3>公告</h3>
-                <div id="announcement-content" class="scrollable-content">
-                    <div class="announcement-item info">欢迎游戏！</div>
-                </div>
+                <div id="announcement-content">欢迎回来！好运常伴！</div>
             </div>
         </div>
 
         <div id="reels-section">
-            <div id="reels-container">
-                <canvas id="win-lines-canvas"></canvas>
-                <div class="reel" data-reel="0">
-                    <div class="reel-viewport">
-                        <div class="reel-strip"></div>
-                    </div>
-                </div>
-                <div class="reel" data-reel="1">
-                    <div class="reel-viewport">
-                        <div class="reel-strip"></div>
-                    </div>
-                </div>
-                <div class="reel" data-reel="2">
-                    <div class="reel-viewport">
-                        <div class="reel-strip"></div>
-                    </div>
-                </div>
-                <div class="reel" data-reel="3">
-                    <div class="reel-viewport">
-                        <div class="reel-strip"></div>
-                    </div>
-                </div>
-                <div class="reel" data-reel="4">
-                    <div class="reel-viewport">
-                        <div class="reel-strip"></div>
-                    </div>
-                </div>
+            <div class="reel-container">
+                <div class="reel" data-index="0"><div class="reel-strip"></div></div>
             </div>
+            <div class="reel-container">
+                <div class="reel" data-index="1"><div class="reel-strip"></div></div>
+            </div>
+            <div class="reel-container">
+                <div class="reel" data-index="2"><div class="reel-strip"></div></div>
+            </div>
+            <div class="reel-container">
+                <div class="reel" data-index="3"><div class="reel-strip"></div></div>
+            </div>
+            <div class="reel-container">
+                <div class="reel" data-index="4"><div class="reel-strip"></div></div>
+            </div>
+            <canvas id="win-lines-canvas"></canvas>
         </div>
 
         <div id="control-panel">
-            <div class="panel-inner">
-                <div class="display-section">
-                    <div class="display-item">
-                        <span class="display-label">已修改</span>
-                        <span id="modified-display" class="display-value">0.00</span>
-                    </div>
-                    <div class="display-item">
-                        <span class="display-label">线数</span>
-                        <div class="bet-controls">
-                            <span id="lines-display" class="display-value lines-value">25</span>
-                            <button id="btn-switch-lines" class="bet-btn compact-btn">切换</button>
-                        </div>
-                    </div>
-                    <div class="display-item">
-                        <span class="display-label">押注</span>
-                        <div class="bet-controls">
-                            <button id="btn-bet-down" class="bet-btn">-</button>
-                            <span id="bet-display" class="display-value">1.00</span>
-                            <button id="btn-bet-up" class="bet-btn">+</button>
-                        </div>
-                    </div>
-                    <div class="display-item">
-                        <span class="display-label">总注</span>
-                        <span id="total-bet-display" class="display-value total-bet">25.00</span>
-                    </div>
-                    <div class="display-item">
-                        <span class="display-label">中奖</span>
-                        <span id="win-display" class="display-value win-amount">0.00</span>
-                    </div>
-                    <div class="display-item">
-                        <span class="display-label">余额</span>
-                        <span id="balance-display" class="display-value">1000.00</span>
-                    </div>
-                    <div id="free-spins-display" class="display-item hidden">
-                        <span class="display-label">免费</span>
-                        <span id="free-spins-count" class="display-value free-spins">0</span>
-                    </div>
-                    <div id="autoplay-display" class="display-item hidden">
-                        <span class="display-label">自动</span>
-                        <span id="autoplay-count" class="display-value autoplay-text">0</span>
-                    </div>
+            <div class="display-section">
+                <div class="display-item">
+                    <span class="label">余额</span>
+                    <span id="balance-display" class="value">1000.00</span>
                 </div>
+                <div class="display-item bet-control">
+                    <button id="btn-bet-down" class="control-btn bet-btn">-</button>
+                    <div class="bet-info">
+                        <span class="label">押注</span>
+                        <span id="bet-display" class="value">1.00</span>
+                    </div>
+                    <button id="btn-bet-up" class="control-btn bet-btn">+</button>
+                </div>
+                <div class="display-item">
+                    <span class="label">总押注</span>
+                    <span id="total-bet-display" class="value">25.00</span>
+                </div>
+            </div>
 
-                <div class="button-section">
-                    <button id="btn-max-bet" class="control-btn">最大</button>
-                    <button id="btn-autoplay" class="control-btn">自动</button>
-                    <button id="btn-stop-autoplay" class="control-btn hidden">停止</button>
-                    <button id="btn-paytable" class="control-btn">赔付</button>
-                    <button id="btn-spin" class="spin-btn">旋转</button>
+            <div class="control-buttons">
+                <button id="btn-paytable" class="control-btn secondary-btn" title="查看赔率表">赔率表</button>
+                <button id="btn-autoplay" class="control-btn secondary-btn" title="自动旋转">自动</button>
+                <button id="btn-spin" class="control-btn primary-btn" title="旋转">SPIN</button>
+                <button id="btn-stop" class="control-btn primary-btn hidden" title="快速停止">停止</button>
+            </div>
+            
+            <div class="display-section">
+                <div class="display-item win-display">
+                    <span class="label">赢取</span>
+                    <span id="win-display" class="value win-amount">0.00</span>
+                </div>
+                <div id="free-spins-display" class="display-item free-spins-display hidden">
+                    <span class="label">免费</span>
+                    <span id="free-spins-count" class="value free-spins-count">10</span>
+                </div>
+                <div id="autoplay-display" class="display-item autoplay-display hidden">
+                    <span class="label">自动</span>
+                    <span id="autoplay-count" class="value autoplay-count">0</span>
                 </div>
             </div>
         </div>
-
-        <!-- 其余全部保持原样，不再重复 -->
-
     </div>
 
-    <!-- 游戏脚本（顺序不能变） -->
+    <div id="paytable-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">赔率表 (40线)</div>
+            <div id="paytable-content" class="paytable-grid">
+                </div>
+            <button id="btn-close-paytable" class="modal-btn">关闭</button>
+        </div>
+    </div>
+
+    <div id="stats-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">游戏统计</div>
+            <div class="stats-body">
+                <div class="stats-section">
+                    <h4>全局统计</h4>
+                    <div class="stats-grid">
+                        <div class="stat-item"><span class="stat-label">总局数</span><span id="stat-total-spins" class="stat-value">0</span></div>
+                        <div class="stat-item"><span class="stat-label">总押注</span><span id="stat-total-wagered" class="stat-value">0.00</span></div>
+                        <div class="stat-item"><span class="stat-label">总回报</span><span id="stat-total-won" class="stat-value">0.00</span></div>
+                        <div class="stat-item"><span class="stat-label">RTP</span><span id="stat-rtp" class="stat-value">0%</span></div>
+                    </div>
+                </div>
+                <div class="stats-section">
+                    <h4>会话统计</h4>
+                    <div class="stats-grid">
+                        <div class="stat-item"><span class="stat-label">最大赢取</span><span id="stat-biggest-win" class="stat-value">0.00</span></div>
+                        <div class="stat-item"><span class="stat-label">中奖率</span><span id="stat-hit-rate" class="stat-value">0%</span></div>
+                    </div>
+                </div>
+            </div>
+            <button id="btn-close-stats" class="modal-btn">关闭</button>
+        </div>
+    </div>
+
     <script src="js/config.js"></script>
     <script src="js/game-state.js"></script>
     <script src="js/rtp-manager.js"></script>
@@ -151,11 +147,10 @@
     <script src="js/ui-manager.js"></script>
     <script src="js/game.js"></script>
 
-    <!-- 背景音乐唤醒：保持不变 -->
     <script>
     document.addEventListener('DOMContentLoaded', () => {
         const wakeUpBgMusic = () => {
-            const bg = new Audio('music/background/bg.mp3'); 
+            const bg = new Audio('music/background/bg.mp3'); // ← 只改了这一行
             bg.loop = true;
             bg.volume = 0.3;
             bg.play().catch(() => {});
@@ -166,6 +161,19 @@
         document.addEventListener('touchstart', wakeUpBgMusic, { once: true });
     });
     </script>
-
+    
+    <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./service-worker.js')
+                .then(reg => {
+                    console.log('Service Worker 注册成功! 范围:', reg.scope);
+                })
+                .catch(err => {
+                    console.error('Service Worker 注册失败:', err);
+                });
+        });
+    }
+    </script>
 </body>
 </html>
